@@ -1,6 +1,71 @@
 import numpy as np
 import cv2
 
+def warp(image, U, V, interpolation, border_mode):
+    """Warps image using X and Y displacements (U and V).
+
+    Args:
+        image (numpy.array): grayscale floating-point image, values
+                             in [0.0, 1.0].
+        U (numpy.array): displacement (in pixels) along X-axis.
+        V (numpy.array): displacement (in pixels) along Y-axis.
+        interpolation (Inter): interpolation method used in cv2.remap.
+        border_mode (BorderType): pixel extrapolation method used in
+                                  cv2.remap.
+
+    Returns:
+        numpy.array: warped image, such that
+                     warped[y, x] = image[y + V[y, x], x + U[y, x]]
+    """
+    img = np.copy(image)
+    M, N = img.shape
+    X, Y = np.meshgrid(range(N), range(M))
+    X, Y = X + U, Y + V
+
+    warped_img = cv2.remap(img, X.astype(np.float32), Y.astype(np.float32), interpolation, borderMode=border_mode)
+
+    return warped_img
+
+def expand_image(image):
+    """Expands an image doubling its width and height.
+    
+    Args:
+        image (numpy.array): grayscale floating-point image, values
+                             in [0.0, 1.0].
+
+    Returns:
+        numpy.array: same type as 'image' with the doubled height and
+                     width.
+    """
+    img = np.copy(image)
+    x, y = img.shape
+    expand_img = np.zeros((2 * x, 2 * y))
+    expand_img[::2, ::2] = img
+    kernel = np.array([1, 4, 6, 4, 1]) / 16
+    filtered_img = cv2.sepFilter2D(expand_img, cv2.CV_64F, kernel, kernel) * 4
+
+    return filtered_img
+
+def gaussian_pyramid(image, levels):
+    """Creates a Gaussian pyramid of a given image.
+
+    Args:
+        image (numpy.array): grayscale floating-point image, values
+                             in [0.0, 1.0].
+        levels (int): number of levels in the resulting pyramid.
+
+    Returns:
+        list: Gaussian pyramid, list of numpy.arrays.
+    """
+    img = np.copy(image)
+    pyramid_list = [img]
+    for i in range(levels - 1):
+        red_img = reduce_image(img)
+        img = red_img
+        pyramid_list.append(red_img)
+
+    return pyramid_list
+
 def optic_flow_lk(img_a, img_b, k_size, k_type, sigma=1):
     """Computes optic flow using the Lucas-Kanade method.
 
@@ -74,9 +139,6 @@ def optic_flow_lk(img_a, img_b, k_size, k_type, sigma=1):
 def hierarchical_lk(img_a, img_b, levels, k_size, k_type, sigma, interpolation,
                     border_mode):
     """Computes the optic flow using Hierarchical Lucas-Kanade.
-
-    This method should use reduce_image(), expand_image(), warp(),
-    and optic_flow_lk().
 
     Args:
         img_a (numpy.array): grayscale floating-point image, values in
