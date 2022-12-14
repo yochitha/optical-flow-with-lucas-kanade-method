@@ -46,6 +46,24 @@ def expand_image(image):
 
     return filtered_img
 
+def reduce_image(image):
+    """Reduces an image to half its shape.
+
+    Args:
+        image (numpy.array): grayscale floating-point image, values in
+                             [0.0, 1.0].
+
+    Returns:
+        numpy.array: output image with half the shape, same type as the
+                     input image.
+    """
+    img = np.copy(image)
+    kernel = np.array([1, 4, 6, 4, 1]) / 16
+    filtered_img = cv2.sepFilter2D(img, cv2.CV_64F, kernel, kernel)
+    reduce_img = filtered_img[::2, ::2]
+
+    return reduce_img
+
 def gaussian_pyramid(image, levels):
     """Creates a Gaussian pyramid of a given image.
 
@@ -82,11 +100,9 @@ def optic_flow_lk(img_a, img_b, k_size, k_type, sigma=1):
                       'uniform' or 'gaussian'. By uniform we mean a
                       kernel with the only ones divided by k_size**2.
                       To implement a Gaussian kernel use
-                      cv2.getGaussianKernel. The autograder will use
-                      'uniform'.
+                      cv2.getGaussianKernel. 
         sigma (float): sigma value if gaussian is chosen. Default
-                       value set to 1 because the autograder does not
-                       use this parameter.
+                       value set to 1.
 
     Returns:
         tuple: 2-element tuple containing:
